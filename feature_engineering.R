@@ -1,5 +1,4 @@
 library("tidyverse")
-library("caret")
 library("Information")
 library("moments")
 
@@ -64,11 +63,11 @@ IV_table <- create_infotables(train_df %>%
 features <- IV_table$Summary$Variable
 sampling_weight <- IV_table$Summary$IV/sum(IV_table$Summary$IV)
 
-crv <- 0.06
+crv <- 0.05
 
 history_v <- c()
 
-for(i in 1:5){
+for(i in 1:60){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
                            size = sample(2:100, size = 1), 
@@ -161,20 +160,20 @@ for(i in 1:5){
       IV_sum <- IV_table_t$Summary
     }
     
-    addss <- IV_sum %>% filter(IV >= 0.01)
+    addss <- IV_sum %>% filter(IV >= crv)
     
     if(nrow(addss) >= 1){
       cat("Make variables that IV is greater than crv", crv, "----------\n")
       tmp <- map(addss$Variable, function(x) x) %>% unlist()
       names(tmp) <- paste0("newvar", i, "_", addss$Variable)
       
-      
+      head(train_df)
       train_df <- 
         train_df %>% 
         cbind(., Add_variables %>% select(!!tmp))
       
       test_df <- 
-        train_df %>% 
+        test_df %>% 
         cbind(., Add_variables_test %>% select(!!tmp))
     } else {
       cat("Hmm.. we can't make variable...\n")
@@ -184,5 +183,10 @@ for(i in 1:5){
   }
 }
 
+dim(train_df)
+dim(test_df)
 
+head(train_df)
 
+fwrite(train_df, "data/fnl_train.csv")
+fwrite(test_df, "data/fnl_test.csv")
