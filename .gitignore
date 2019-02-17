@@ -4,3 +4,10 @@
 .Ruserdata
 data
 data/*.csv
+model
+model/*
+result
+result/*
+Santander.Rproj
+.ipynb_checkpoints
+.ipynb_checkpoints/*
