@@ -70,7 +70,7 @@ history_v <- c()
 for(i in 1:60){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
-                           size = sample(2:100, size = 1), 
+                           size = sample(2:120, size = 1), 
                            replace = FALSE, 
                            prob = sampling_weight)
   )
@@ -182,11 +182,6 @@ for(i in 1:60){
     history_v <- c(paste(smpd_vars, collapse = "."), history_v)
   }
 }
-
-dim(train_df)
-dim(test_df)
-
-head(train_df)
 
 fwrite(train_df, "data/fnl_train.csv")
 fwrite(test_df, "data/fnl_test.csv")
