@@ -1,7 +1,9 @@
 library("data.table")
 library("h2o")
 
-h2o.init(nthreads = 26, max_mem_size = "40g")
+ths <- parallel::detectCores() - 2
+
+h2o.init(nthreads = ths, max_mem_size = "40g")
 h2o.removeAll()
 
 train_h2o <- h2o.importFile("data/fnl_train.csv", destination_frame = "train_h2o")
