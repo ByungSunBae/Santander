@@ -67,14 +67,19 @@ IV_table <- create_infotables(train_df %>%
 features <- IV_table$Summary$Variable
 sampling_weight <- IV_table$Summary$IV/sum(IV_table$Summary$IV)
 
-crv <- 0.05
+crv <- 0.07
 
-history_v <- c()
+if(file.exists("data/hist_comb.csv")){
+  tmp <- fread("data/hist_comb.csv")
+  history_v <- tmp[[1]]
+} else {
+  history_v <- c()
+}
 
-for(i in 1:100){
+for(i in 1:500){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
-                           size = sample(2:120, size = 1), 
+                           size = sample(2:160, size = 1), 
                            replace = FALSE, 
                            prob = sampling_weight)
   )
@@ -85,13 +90,13 @@ for(i in 1:100){
   } else {
     if(length(smpd_vars) < 30){
       
-      mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "log_absmax", "max_inv_exp", "target")
-      mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "log_absmax", "max_inv_exp")
+      mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", "target")
+      mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp")
       
     } else {
-      mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "log_absmax", "max_inv_exp", 
+      mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", 
                    "sd", "sd_sq", "kurt", "kurt_sq", "q1_exp", "q3_exp", "CV_c", "target")
-      mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "log_absmax", "max_inv_exp", 
+      mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", 
                    "sd", "sd_sq", "kurt", "kurt_sq", "q1_exp", "q3_exp", "CV_c")
     }
     
@@ -110,7 +115,6 @@ for(i in 1:100){
                  "max" = apply(select(., smpd_vars), 1, function(x) max(x)),
                  "min" = apply(select(., smpd_vars), 1, function(x) min(x)),
                  "log_maxabs" = apply(select(., smpd_vars), 1, function(x) log(0.5 + max(abs(x)))),
-                 "log_absmax" = apply(select(., smpd_vars), 1, function(x) log(0.5 + abs(max(x)))),
                  "max_inv_exp" = apply(select(., smpd_vars), 1, function(x) max(1/exp(x))),
                  "sd" = apply(select(., smpd_vars), 1, function(x) sd(x)),
                  "sd_sq" = apply(select(., smpd_vars), 1, function(x) sd(x^2)),
@@ -123,7 +127,7 @@ for(i in 1:100){
                  "CV_c" = apply(select(., smpd_vars), 1, function(x) sd(x)/mean(x)),
                  "target" = apply(select(., target), 1, function(x) x)
           )
-        }, mc.cores = 6
+        }, mc.cores = 8
       )]
     
     names(Add_variables) <- mk_vars_train
@@ -140,7 +144,6 @@ for(i in 1:100){
                  "max" = apply(select(., smpd_vars), 1, function(x) max(x)),
                  "min" = apply(select(., smpd_vars), 1, function(x) min(x)),
                  "log_maxabs" = apply(select(., smpd_vars), 1, function(x) log(0.5 + max(abs(x)))),
-                 "log_absmax" = apply(select(., smpd_vars), 1, function(x) log(0.5 + abs(max(x)))),
                  "max_inv_exp" = apply(select(., smpd_vars), 1, function(x) max(1/exp(x))),
                  "sd" = apply(select(., smpd_vars), 1, function(x) sd(x)),
                  "sd_sq" = apply(select(., smpd_vars), 1, function(x) sd(x^2)),
@@ -153,7 +156,7 @@ for(i in 1:100){
                  "CV_c" = apply(select(., smpd_vars), 1, function(x) sd(x)/mean(x)),
                  "target" = apply(select(., target), 1, function(x) x)
           )
-        }, mc.cores = 6
+        }, mc.cores = 8
       )]
     names(Add_variables_test) <- mk_vars_test
     
@@ -182,5 +185,8 @@ for(i in 1:100){
   }
 }
 
+tmp <- data.table(hist = history_v)
+
+fwrite(tmp, "data/hist_comb.csv")
 fwrite(train_df, "data/fnl_train.csv")
 fwrite(test_df, "data/fnl_test.csv")
