@@ -69,9 +69,14 @@ sampling_weight <- IV_table$Summary$IV/sum(IV_table$Summary$IV)
 
 crv <- 0.05
 
-history_v <- c()
+if(file.exists("data/history_comb.csv")){
+  hist_dt <- fread("data/history_comb.csv")
+  history_v <- hist_dt[[1]]
+} else {
+  history_v <- c()
+}
 
-for(i in 1:100){
+for(i in 1:500){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
                            size = sample(2:120, size = 1), 
@@ -98,7 +103,7 @@ for(i in 1:100){
     selected_vars_train <- c("ID_code", smpd_vars, target)
     selected_vars_test <- c("ID_code", smpd_vars)
     
-    Add_variables <- train_df[, selected_vars_train, with = FALSE] %>% 
+    Add_variables_1 <- train_df[, selected_vars_train, with = FALSE] %>% 
       .[, parallel::mclapply(
         mk_vars_train,
         function(x){
@@ -126,9 +131,24 @@ for(i in 1:100){
         }, mc.cores = 6
       )]
     
-    names(Add_variables) <- mk_vars_train
+    names(Add_variables_1) <- mk_vars_train
     
-    Add_variables_test <- test_df[, selected_vars_test, with = FALSE] %>% 
+    # PCA
+    if(length(smpd_vars) >= 3){
+      ss <- 3
+    } else {
+      ss <- length(smpd_vars)
+    }
+    
+    pca.cl <- princomp(train_df[, smpd_vars, with = FALSE])
+    
+    pca_table <- as.data.table(predict(pca.cl, newdata = train_df[, smpd_vars, with = FALSE]))
+    Add_variables_2 <- pca_table[, 1:ss]
+    Add_variables_2$ID_code <- train_df$ID_code
+    
+    Add_variables <- merge(Add_variables_1, Add_variables_2, by = "ID_code")
+    
+    Add_variables_test_1 <- test_df[, selected_vars_test, with = FALSE] %>% 
       .[, parallel::mclapply(
         mk_vars_test,
         function(x){
@@ -155,7 +175,15 @@ for(i in 1:100){
           )
         }, mc.cores = 6
       )]
-    names(Add_variables_test) <- mk_vars_test
+    
+    names(Add_variables_test_1) <- mk_vars_test
+    
+    pca_table <- as.data.table(predict(pca.cl, newdata = test_df[, smpd_vars, with = FALSE]))
+    
+    Add_variables_test_2 <- pca_table[, 1:ss]
+    Add_variables_test_2$ID_code <- test_df$ID_code
+    
+    Add_variables_test <- merge(Add_variables_test_1, Add_variables_test_2, by = "ID_code")
     
     IV_table_t <- create_infotables(data = Add_variables[, -"ID_code"], y = target)
     IV_sum <- IV_table_t$Summary
@@ -182,5 +210,9 @@ for(i in 1:100){
   }
 }
 
+tmp <- data.table(hist = history_v)
+fwrite(tmp, "data/history_comb.csv")
 fwrite(train_df, "data/fnl_train.csv")
 fwrite(test_df, "data/fnl_test.csv")
+
+
