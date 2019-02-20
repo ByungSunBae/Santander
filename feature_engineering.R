@@ -76,7 +76,7 @@ if(file.exists("data/hist_comb.csv")){
   history_v <- c()
 }
 
-for(i in 1:200){
+for(i in 1:500){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
                            size = sample(2:160, size = 1),
