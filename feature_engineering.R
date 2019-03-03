@@ -79,7 +79,8 @@ if(file.exists("data/hist_comb.csv")){
 for(i in 1:500){
   cat(i, "th----\n")
   smpd_vars <- sort(sample(features, 
-                           size = sample(2:160, size = 1), 
+                           size = sample(2:160, size = 1),
+                           # size = 2, 
                            replace = FALSE, 
                            prob = sampling_weight)
   )
@@ -90,14 +91,14 @@ for(i in 1:500){
   } else {
     if(length(smpd_vars) < 30){
       
-      mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", "target")
-      mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp")
+      mk_vars_train <- c("ID_code", "mean", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", "target")
+      mk_vars_test <- c("ID_code", "mean", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp")
       
     } else {
       mk_vars_train <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", 
-                   "sd", "sd_sq", "kurt", "kurt_sq", "q1_exp", "q3_exp", "CV_c", "target")
+                   "sd", "sd_sq", "q1_exp", "q3_exp", "CV_c", "target")
       mk_vars_test <- c("ID_code", "sqmean", "soft_max", "exp_mean", "max", "min", "log_maxabs", "max_inv_exp", 
-                   "sd", "sd_sq", "kurt", "kurt_sq", "q1_exp", "q3_exp", "CV_c")
+                   "sd", "sd_sq", "q1_exp", "q3_exp", "CV_c")
     }
     
     selected_vars_train <- c("ID_code", smpd_vars, target)
@@ -109,6 +110,7 @@ for(i in 1:500){
         function(x){
           switch(x,
                  "ID_code" = apply(select(., "ID_code"), 1, function(x) x),
+                 "mean" = apply(select(., smpd_vars), 1, function(x) mean(x)),
                  "sqmean" = apply(select(., smpd_vars), 1, function(x) mean(x^2)),
                  "soft_max" = apply(select(., smpd_vars), 1, function(x) max(exp(x * 0.1)/sum(exp(x * 0.1)))),
                  "exp_mean" = apply(select(., smpd_vars), 1, function(x) mean(exp(x))),
@@ -153,6 +155,7 @@ for(i in 1:500){
         function(x){
           switch(x,
                  "ID_code" = apply(select(., "ID_code"), 1, function(x) x),
+                 "mean" = apply(select(., smpd_vars), 1, function(x) mean(x)),
                  "sqmean" = apply(select(., smpd_vars), 1, function(x) mean(x^2)),
                  "soft_max" = apply(select(., smpd_vars), 1, function(x) max(exp(x * 0.1)/sum(exp(x * 0.1)))),
                  "exp_mean" = apply(select(., smpd_vars), 1, function(x) mean(exp(x))),
@@ -183,8 +186,10 @@ for(i in 1:500){
     
     Add_variables_test <- merge(Add_variables_test_1, Add_variables_test_2, by = "ID_code")
     
-    IV_table_t <- create_infotables(data = Add_variables[, -"ID_code"], y = target)
+    
+    IV_table_t <- create_infotables(data = Add_variables[train_df$ID_code, ][, -"ID_code"], y = target)
     IV_sum <- IV_table_t$Summary
+    IV_sum_1 <- IV_table_t$Summary
     
     addss <- IV_sum %>% filter(IV >= crv)
     
@@ -195,11 +200,11 @@ for(i in 1:500){
       
       train_df <-
         train_df %>%
-        cbind(., Add_variables %>% as_tibble() %>% select(!!tmp))
+        merge(., Add_variables %>% as_tibble() %>% select(!!c("ID_code", tmp)), by = "ID_code")
       
       test_df <-
         test_df %>%
-        cbind(., Add_variables_test %>% as_tibble() %>% select(!!tmp))
+        merge(., Add_variables_test %>% as_tibble() %>% select(!!c("ID_code", tmp)), by = "ID_code")
     } else {
       cat("Hmm.. we can't make variable...\n")
     }
@@ -213,5 +218,4 @@ tmp <- data.table(hist = history_v)
 fwrite(tmp, "data/hist_comb.csv")
 fwrite(train_df, "data/fnl_train.csv")
 fwrite(test_df, "data/fnl_test.csv")
-
 
